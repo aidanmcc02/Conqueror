@@ -10,12 +10,22 @@ const GAME_MODES = [
 ];
 
 function corsHeaders(origin: string | undefined): Record<string, string> {
-  const allowOrigin =
-    config.corsOrigin === "*" ? "*" : config.corsOrigin;
+  let allowOrigin: string;
+  if (config.corsOrigin === "*") {
+    allowOrigin = "*";
+  } else {
+    const allowed = config.corsOrigin.split(",").map((o) => o.trim()).filter(Boolean);
+    if (origin && allowed.includes(origin)) {
+      allowOrigin = origin;
+    } else {
+      allowOrigin = allowed[0] ?? "*";
+    }
+  }
   return {
     "Access-Control-Allow-Origin": allowOrigin,
     "Access-Control-Allow-Methods": "GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Max-Age": "86400",
   };
 }
 
