@@ -8,7 +8,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
-    "db:migrate": "echo 'Run: psql $CONQUEROR_DATABASE_URL -f src/db/schema.sql'"
+    "migrate": "node scripts/run-migrations.js"
   },
   "engines": {
     "node": ">=18"

@@ -1,5 +1,5 @@
 import { config } from "./config.js";
-import { isMatchProcessed, markMatchProcessed } from "./db/index.js";
+import { isMatchProcessed, markMatchProcessed, runMigrations } from "./db/index.js";
 import { getLinkedUsers, postNotify } from "./meeps/client.js";
 import {
   getPuuidAndRegion,
@@ -102,6 +102,7 @@ async function main(): Promise<void> {
   console.log(`[Conqueror] Meeps API: ${config.meepsApiUrl}`);
   console.log(`[Conqueror] Poll interval: ${config.pollIntervalMs}ms`);
 
+  await runMigrations();
   await poll();
   setInterval(poll, config.pollIntervalMs);
 }

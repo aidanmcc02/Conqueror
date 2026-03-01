@@ -26,11 +26,12 @@ Copy `.env.example` to `.env` and configure:
 
 ### 2. Database
 
-Run the schema once:
+Migrations run automatically in two ways:
 
-```bash
-psql $CONQUEROR_DATABASE_URL -f src/db/schema.sql
-```
+- **preDeployCommand** – In `railway.json`, `npm run migrate` runs before each deploy. That executes `scripts/run-migrations.js`, which applies any pending migrations.
+- **On server start** – When the app starts, `index.ts` calls `runMigrations({ silent: true })`. So migrations run again on startup if they weren’t run earlier.
+
+Both use the same migration runner, which only applies migrations that haven’t been applied yet (via `schema_migrations`), so running them twice is safe.
 
 ### 3. Run
 
@@ -51,8 +52,7 @@ npm run dev
 1. Create a new Railway project.
 2. Add a PostgreSQL service.
 3. Deploy this repo as a service.
-4. Set env vars in Railway dashboard.
-5. Run migrations: `psql $CONQUEROR_DATABASE_URL -f src/db/schema.sql` (or via Railway CLI).
+4. Set env vars in Railway dashboard. Migrations run automatically on each deploy.
 
 ## Meeps integration
 

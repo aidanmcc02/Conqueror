@@ -1,9 +1,14 @@
 import pg from "pg";
 import { config } from "../config.js";
+import { runMigrations as runMigrationsFromScript } from "../../scripts/run-migrations.js";
 
 const pool = new pg.Pool({
   connectionString: config.databaseUrl,
 });
+
+export async function runMigrations(): Promise<void> {
+  await runMigrationsFromScript(pool, { silent: true });
+}
 
 export async function isMatchProcessed(matchId: string): Promise<boolean> {
   const r = await pool.query(

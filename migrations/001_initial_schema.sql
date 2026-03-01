@@ -1,6 +1,3 @@
--- Conqueror: TFT match deduplication
--- Run: psql $CONQUEROR_DATABASE_URL -f src/db/schema.sql
-
 CREATE TABLE IF NOT EXISTS processed_matches (
   match_id TEXT PRIMARY KEY,
   puuid TEXT NOT NULL,
