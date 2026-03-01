@@ -9,24 +9,20 @@ const GAME_MODES = [
   { id: "double_up", name: "Double Up" },
 ];
 
+// CORS: origin: true semantics - reflect request origin (fixes Railway edge proxy)
 function corsHeaders(origin: string | undefined): Record<string, string> {
-  let allowOrigin: string;
-  if (config.corsOrigin === "*") {
-    allowOrigin = "*";
-  } else {
-    const allowed = config.corsOrigin.split(",").map((o) => o.trim()).filter(Boolean);
-    if (origin && allowed.includes(origin)) {
-      allowOrigin = origin;
-    } else {
-      allowOrigin = allowed[0] ?? "*";
-    }
-  }
-  return {
+  const allowOrigin = origin ?? config.corsOrigin;
+  const headers: Record<string, string> = {
     "Access-Control-Allow-Origin": allowOrigin,
     "Access-Control-Allow-Methods": "GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Headers":
+      "Content-Type, Authorization, X-Conqueror-Secret, X-Diana-Secret, X-Build-Secret",
     "Access-Control-Max-Age": "86400",
   };
+  if (allowOrigin !== "*") {
+    headers["Access-Control-Allow-Credentials"] = "true";
+  }
+  return headers;
 }
 
 function parseQuery(url: string): URLSearchParams {
