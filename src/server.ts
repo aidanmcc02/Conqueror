@@ -1,4 +1,5 @@
-import http from "http";
+import express from "express";
+import cors from "cors";
 import { config } from "./config.js";
 import { getRecentMatches } from "./db/index.js";
 
@@ -9,95 +10,62 @@ const GAME_MODES = [
   { id: "double_up", name: "Double Up" },
 ];
 
-// CORS: origin: true semantics - reflect request origin (fixes Railway edge proxy)
-function corsHeaders(origin: string | undefined): Record<string, string> {
-  const allowOrigin = origin ?? config.corsOrigin;
-  const headers: Record<string, string> = {
-    "Access-Control-Allow-Origin": allowOrigin,
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
-    "Access-Control-Allow-Headers":
-      "Content-Type, Authorization, X-Conqueror-Secret, X-Diana-Secret, X-Build-Secret",
-    "Access-Control-Max-Age": "86400",
-  };
-  if (allowOrigin !== "*") {
-    headers["Access-Control-Allow-Credentials"] = "true";
-  }
-  return headers;
-}
+const app = express();
 
-function parseQuery(url: string): URLSearchParams {
-  const idx = url.indexOf("?");
-  return new URLSearchParams(idx >= 0 ? url.slice(idx) : "");
-}
+// CORS: origin: true reflects request origin (fixes Railway edge proxy). credentials: true for cookies if needed.
+app.use(
+  cors({
+    origin: true,
+    methods: ["GET", "OPTIONS"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Conqueror-Secret",
+      "X-Diana-Secret",
+      "X-Build-Secret",
+    ],
+    credentials: true,
+  })
+);
 
-const server = http.createServer(async (req, res) => {
-  const origin = req.headers.origin;
-  const headers = corsHeaders(origin);
-
-  if (req.method === "OPTIONS") {
-    res.writeHead(204, headers);
-    res.end();
-    return;
-  }
-
-  if (req.method !== "GET") {
-    res.writeHead(405, headers);
-    res.end();
-    return;
-  }
-
-  const url = req.url ?? "/";
-  const path = url.split("?")[0];
-
-  if (path === "/match/filters") {
-    res.writeHead(200, { "Content-Type": "application/json", ...headers });
-    res.end(JSON.stringify({ gameModes: GAME_MODES }));
-    return;
-  }
-
-  if (path === "/match/recent") {
-    try {
-      const q = parseQuery(url);
-      const limit = Math.min(
-        parseInt(q.get("limit") ?? "20", 10) || 20,
-        100
-      );
-      const offset = Math.max(parseInt(q.get("offset") ?? "0", 10) || 0, 0);
-      const gameModeParam = (q.get("gameMode") ?? "all").toLowerCase();
-      const gameMode =
-        ["all", "normal", "ranked", "double_up"].includes(gameModeParam)
-          ? (gameModeParam as "all" | "normal" | "ranked" | "double_up")
-          : "all";
-
-      const { matches, hasMore } = await getRecentMatches(limit, offset, gameMode);
-
-      const matchesJson = matches.map((m) => ({
-        matchId: m.match_id,
-        gameName: m.game_name,
-        tagLine: m.tag_line,
-        placement: m.placement,
-        comp: m.comp,
-        gameMode: m.game_mode as "normal" | "ranked" | "double_up",
-        gameEndTime: m.game_end_time.toISOString(),
-      }));
-
-      res.writeHead(200, { "Content-Type": "application/json", ...headers });
-      res.end(JSON.stringify({ matches: matchesJson, hasMore }));
-    } catch (err) {
-      console.error("[Conqueror] /match/recent error:", err);
-      res.writeHead(500, headers);
-      res.end(JSON.stringify({ error: "Internal server error" }));
-    }
-    return;
-  }
-
-  res.writeHead(404, headers);
-  res.end();
+app.get("/match/filters", (_req, res) => {
+  res.json({ gameModes: GAME_MODES });
 });
 
-export function startServer(): http.Server {
-  server.listen(config.port, () => {
+app.get("/match/recent", async (req, res) => {
+  try {
+    const limit = Math.min(
+      parseInt(req.query.limit as string ?? "20", 10) || 20,
+      100
+    );
+    const offset = Math.max(parseInt(req.query.offset as string ?? "0", 10) || 0, 0);
+    const gameModeParam = ((req.query.gameMode as string) ?? "all").toLowerCase();
+    const gameMode =
+      ["all", "normal", "ranked", "double_up"].includes(gameModeParam)
+        ? (gameModeParam as "all" | "normal" | "ranked" | "double_up")
+        : "all";
+
+    const { matches, hasMore } = await getRecentMatches(limit, offset, gameMode);
+
+    const matchesJson = matches.map((m) => ({
+      matchId: m.match_id,
+      gameName: m.game_name,
+      tagLine: m.tag_line,
+      placement: m.placement,
+      comp: m.comp,
+      gameMode: m.game_mode as "normal" | "ranked" | "double_up",
+      gameEndTime: m.game_end_time.toISOString(),
+    }));
+
+    res.json({ matches: matchesJson, hasMore });
+  } catch (err) {
+    console.error("[Conqueror] /match/recent error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+export function startServer(): ReturnType<express.Application["listen"]> {
+  return app.listen(config.port, () => {
     console.log(`[Conqueror] HTTP server listening on port ${config.port}`);
   });
-  return server;
 }
