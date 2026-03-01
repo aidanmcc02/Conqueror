@@ -15,4 +15,6 @@ export const config = {
   meepsApiUrl: (process.env.MEEPS_API_URL ?? "https://meeps-backend.railway.app").replace(/\/$/, ""),
   webhookSecret: requireEnv("CONQUEROR_WEBHOOK_SECRET"),
   pollIntervalMs: parseInt(process.env.POLL_INTERVAL_MS ?? "60000", 10), // 1 min default
+  port: parseInt(process.env.PORT ?? "3000", 10),
+  corsOrigin: process.env.CORS_ORIGIN ?? process.env.MEEPS_FRONTEND_ORIGIN ?? "*",
 } as const;

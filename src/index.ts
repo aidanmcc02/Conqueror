@@ -1,6 +1,12 @@
 import { config } from "./config.js";
-import { isMatchProcessed, markMatchProcessed, runMigrations } from "./db/index.js";
+import {
+  isMatchProcessed,
+  insertMatch,
+  markMatchProcessed,
+  runMigrations,
+} from "./db/index.js";
 import { getLinkedUsers, postNotify } from "./meeps/client.js";
+import { startServer } from "./server.js";
 import {
   getPuuidAndRegion,
   getMatchIds,
@@ -61,6 +67,16 @@ async function processUser(user: {
         gameMode: details.gameMode,
       });
 
+      await insertMatch(
+        matchId,
+        puuid,
+        game_name,
+        tag_line,
+        details.placement,
+        details.comp,
+        details.gameMode,
+        details.gameEndTime
+      );
       await markMatchProcessed(matchId, puuid);
       console.log(
         `[Conqueror] Notified: ${game_name}#${tag_line} - #${details.placement} (${details.gameMode})`
@@ -97,6 +113,7 @@ async function main(): Promise<void> {
   console.log(`[Conqueror] Poll interval: ${config.pollIntervalMs}ms`);
 
   await runMigrations();
+  startServer();
   await poll();
   setInterval(poll, config.pollIntervalMs);
 }

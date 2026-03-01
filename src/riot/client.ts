@@ -31,6 +31,7 @@ export type TftMatchSummary = {
   gameMode: "normal" | "ranked" | "double_up";
   gameName: string;
   tagLine: string;
+  gameEndTime: number; // ms since epoch
 };
 
 export async function getPuuidAndRegion(
@@ -89,6 +90,9 @@ export async function getMatchDetails(
     .filter(Boolean);
   const comp = traits || units.join(", ") || "Unknown";
 
+  const info = match.info as { game_datetime?: number };
+  const gameEndTime = info.game_datetime ?? Date.now();
+
   return {
     matchId,
     puuid: targetPuuid,
@@ -97,5 +101,6 @@ export async function getMatchDetails(
     gameMode,
     gameName: "",
     tagLine: "",
+    gameEndTime,
   };
 }
