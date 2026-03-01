@@ -7,13 +7,7 @@ import {
   getMatchDetails,
   type RegionGroup,
 } from "./riot/client.js";
-
-function parseRiotId(leagueUsername: string): { gameName: string; tagLine: string } | null {
-  if (!leagueUsername) return null;
-  const match = leagueUsername.match(/^(.+)#(.+)$/);
-  if (match) return { gameName: match[1].trim(), tagLine: match[2].trim() };
-  return null;
-}
+import { parseRiotId } from "./utils/parseRiotId.js";
 
 async function processUser(user: {
   user_id: number;

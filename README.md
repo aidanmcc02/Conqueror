@@ -47,6 +47,17 @@ For development:
 npm run dev
 ```
 
+Run tests:
+
+```bash
+npm test
+```
+
+### CI
+
+- **GitHub Actions** – Tests run on push and pull requests to `main`/`master` (`.github/workflows/test.yml`).
+- **Railway** – Tests run as part of `npm run build` before deploy; a failing build blocks deployment.
+
 ## Railway deployment
 
 1. Create a new Railway project.
