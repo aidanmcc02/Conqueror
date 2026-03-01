@@ -12,7 +12,24 @@ const GAME_MODES = [
 
 const app = express();
 
-// CORS: origin: true reflects request origin (fixes Railway edge proxy). credentials: true for cookies if needed.
+// Explicit OPTIONS handler first - catches ALL preflight requests (app.options("*") can miss nested paths)
+app.use((req, res, next) => {
+  if (req.method === "OPTIONS") {
+    const origin = req.headers.origin ?? "*";
+    res.set("Access-Control-Allow-Origin", origin);
+    res.set("Access-Control-Allow-Credentials", "true");
+    res.set("Access-Control-Allow-Methods", "GET, OPTIONS");
+    res.set(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization, X-Conqueror-Secret, X-Diana-Secret, X-Build-Secret"
+    );
+    res.set("Access-Control-Max-Age", "86400");
+    return res.status(204).end();
+  }
+  next();
+});
+
+// CORS for actual requests
 app.use(
   cors({
     origin: true,
@@ -27,6 +44,11 @@ app.use(
     credentials: true,
   })
 );
+
+// Health check - verify app is reachable (Railway recommends binding 0.0.0.0)
+app.get("/", (_req, res) => {
+  res.json({ ok: true, service: "conqueror" });
+});
 
 app.get("/match/filters", (_req, res) => {
   res.json({ gameModes: GAME_MODES });
@@ -65,7 +87,7 @@ app.get("/match/recent", async (req, res) => {
 });
 
 export function startServer(): ReturnType<express.Application["listen"]> {
-  return app.listen(config.port, () => {
-    console.log(`[Conqueror] HTTP server listening on port ${config.port}`);
+  return app.listen(config.port, "0.0.0.0", () => {
+    console.log(`[Conqueror] HTTP server listening on 0.0.0.0:${config.port}`);
   });
 }
