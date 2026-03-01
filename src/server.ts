@@ -21,7 +21,7 @@ app.use((req, res, next) => {
     res.set("Access-Control-Allow-Methods", "GET, OPTIONS");
     res.set(
       "Access-Control-Allow-Headers",
-      "Content-Type, Authorization, X-Conqueror-Secret, X-Diana-Secret, X-Build-Secret"
+      "Content-Type, Authorization, Cache-Control, Pragma, X-Conqueror-Secret, X-Diana-Secret, X-Build-Secret"
     );
     res.set("Access-Control-Max-Age", "86400");
     return res.status(204).end();
@@ -37,6 +37,8 @@ app.use(
     allowedHeaders: [
       "Content-Type",
       "Authorization",
+      "Cache-Control",
+      "Pragma",
       "X-Conqueror-Secret",
       "X-Diana-Secret",
       "X-Build-Secret",
