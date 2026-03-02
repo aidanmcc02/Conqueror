@@ -16,6 +16,8 @@ export type ConquerorNotifyPayload = {
   comp: string;
   gameMode: "normal" | "ranked" | "double_up";
   url?: string;
+  /** Human-readable comp name (e.g. "Void Longshot", "Arcanist"). Meeps prefers this over inferred name. */
+  compName?: string;
   lpChange?: number;
   ratedTier?: string;
   ratedDivision?: string;

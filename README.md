@@ -80,8 +80,11 @@ Conqueror expects:
   "matchId": "EUW1_1234567890",
   "placement": 1,
   "comp": "K/DA Ahri, True Damage",
-  "gameMode": "ranked"
+  "gameMode": "ranked",
+  "compName": "Void Longshot"
 }
 ```
 
 `gameMode`: `"normal"` | `"ranked"` | `"double_up"`
+
+`compName` (optional): Human-readable comp name (e.g. "Void Longshot", "Arcanist"). Conqueror infers from traits; Meeps prefers this over its own inference when present.

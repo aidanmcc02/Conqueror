@@ -65,6 +65,7 @@ async function processUser(user: {
         placement: details.placement,
         comp: details.comp,
         gameMode: details.gameMode,
+        ...(details.compName && { compName: details.compName }),
         lpChange: details.lpChange,
         ratedTier: details.ratedTier,
         ratedDivision: details.ratedDivision,

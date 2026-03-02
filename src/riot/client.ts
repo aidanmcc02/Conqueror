@@ -61,6 +61,8 @@ export type TftMatchSummary = {
   gameName: string;
   tagLine: string;
   gameEndTime: number; // ms since epoch
+  /** Human-readable comp name (e.g. "Void Longshot"). Optional; Meeps infers if omitted. */
+  compName?: string;
   units?: UnitSummary[];
   champions?: string[];
   gameDuration?: number;
@@ -146,6 +148,21 @@ async function getLeagueEntry(
   } catch {
     return null;
   }
+}
+
+/** Infer human-readable comp name from traits (e.g. "Void Longshot", "Arcanist"). */
+function inferCompName(traits: TraitSummary[]): string | undefined {
+  if (!traits.length) return undefined;
+  const sorted = [...traits]
+    .filter((t) => !t.name?.includes("Unique"))
+    .sort((a, b) => b.num_units - a.num_units);
+  const top = sorted.slice(0, 2);
+  if (!top.length) return undefined;
+  const names = top.map((t) => {
+    const raw = (t.name ?? "").replace(/^TFT\d*_/, "");
+    return raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : "";
+  }).filter(Boolean);
+  return names.length ? names.join(" ") : undefined;
 }
 
 function formatCurrentRank(tier: string, division: string, lp: number): string {
@@ -261,6 +278,7 @@ export async function getMatchDetails(
     gameName: "",
     tagLine: "",
     gameEndTime,
+    compName: inferCompName(traits),
     units: units.length ? units : undefined,
     champions: champions.length ? champions : undefined,
     gameDuration,
