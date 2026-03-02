@@ -70,6 +70,9 @@ export async function insertMatch(
 ): Promise<void> {
   const unitsJson = extras?.units ? JSON.stringify(extras.units) : null;
   const traitsJson = extras?.traits ? JSON.stringify(extras.traits) : null;
+  const gameDuration =
+    extras?.gameDuration != null ? Math.round(extras.gameDuration) : null;
+  const level = extras?.level != null ? Math.round(extras.level) : null;
   await pool.query(
     `INSERT INTO matches (match_id, puuid, game_name, tag_line, placement, comp, game_mode, game_end_time, units, game_duration, level, traits, region_group)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12::jsonb, $13)
@@ -95,8 +98,8 @@ export async function insertMatch(
       gameMode,
       new Date(gameEndTime),
       unitsJson,
-      extras?.gameDuration ?? null,
-      extras?.level ?? null,
+      gameDuration,
+      level,
       traitsJson,
       extras?.regionGroup ?? null,
     ]

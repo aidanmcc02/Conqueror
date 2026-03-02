@@ -132,7 +132,7 @@ export async function getMatchDetails(
     .filter((u) => u.character_id)
     .map((u) => ({
       character_id: u.character_id!,
-      ...(u.tier != null && { tier: u.tier }),
+      ...(u.tier != null && { tier: Math.round(u.tier) }),
       ...(u.items?.length ? { items: u.items } : undefined),
     }));
 
@@ -144,11 +144,13 @@ export async function getMatchDetails(
     .filter((t) => (t.tier_current ?? t.num_units ?? 0) > 0)
     .map((t) => ({
       name: t.name ?? "Unknown",
-      num_units: t.tier_current ?? t.num_units ?? 0,
+      num_units: Math.round(t.tier_current ?? t.num_units ?? 0),
     }));
 
-  const gameDuration = info.game_length != null ? info.game_length : undefined;
-  const level = participant.level != null ? participant.level : undefined;
+  const gameDuration =
+    info.game_length != null ? Math.round(info.game_length) : undefined;
+  const level =
+    participant.level != null ? Math.round(participant.level) : undefined;
 
   return {
     matchId,
