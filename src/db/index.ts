@@ -25,6 +25,17 @@ export async function markMatchProcessed(matchId: string, puuid: string): Promis
   );
 }
 
+export type UnitRow = {
+  character_id: string;
+  tier?: number;
+  items?: number[];
+};
+
+export type TraitRow = {
+  name: string;
+  num_units: number;
+};
+
 export type MatchRow = {
   match_id: string;
   game_name: string;
@@ -33,6 +44,11 @@ export type MatchRow = {
   comp: string;
   game_mode: string;
   game_end_time: Date;
+  units?: UnitRow[] | null;
+  game_duration?: number | null;
+  level?: number | null;
+  traits?: TraitRow[] | null;
+  region_group?: string | null;
 };
 
 export async function insertMatch(
@@ -43,18 +59,32 @@ export async function insertMatch(
   placement: number,
   comp: string,
   gameMode: "normal" | "ranked" | "double_up",
-  gameEndTime: number
+  gameEndTime: number,
+  extras?: {
+    units?: { character_id: string; tier?: number; items?: number[] }[];
+    gameDuration?: number;
+    level?: number;
+    traits?: { name: string; num_units: number }[];
+    regionGroup?: string;
+  }
 ): Promise<void> {
+  const unitsJson = extras?.units ? JSON.stringify(extras.units) : null;
+  const traitsJson = extras?.traits ? JSON.stringify(extras.traits) : null;
   await pool.query(
-    `INSERT INTO matches (match_id, puuid, game_name, tag_line, placement, comp, game_mode, game_end_time)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `INSERT INTO matches (match_id, puuid, game_name, tag_line, placement, comp, game_mode, game_end_time, units, game_duration, level, traits, region_group)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12::jsonb, $13)
      ON CONFLICT (match_id, puuid) DO UPDATE SET
        game_name = EXCLUDED.game_name,
        tag_line = EXCLUDED.tag_line,
        placement = EXCLUDED.placement,
        comp = EXCLUDED.comp,
        game_mode = EXCLUDED.game_mode,
-       game_end_time = EXCLUDED.game_end_time`,
+       game_end_time = EXCLUDED.game_end_time,
+       units = COALESCE(EXCLUDED.units, matches.units),
+       game_duration = COALESCE(EXCLUDED.game_duration, matches.game_duration),
+       level = COALESCE(EXCLUDED.level, matches.level),
+       traits = COALESCE(EXCLUDED.traits, matches.traits),
+       region_group = COALESCE(EXCLUDED.region_group, matches.region_group)`,
     [
       matchId,
       puuid,
@@ -64,6 +94,11 @@ export async function insertMatch(
       comp,
       gameMode,
       new Date(gameEndTime),
+      unitsJson,
+      extras?.gameDuration ?? null,
+      extras?.level ?? null,
+      traitsJson,
+      extras?.regionGroup ?? null,
     ]
   );
 }
@@ -86,7 +121,8 @@ export async function getRecentMatches(
       : [limitParam + 1, offsetParam, gameMode];
 
   const r = await pool.query(
-    `SELECT match_id, game_name, tag_line, placement, comp, game_mode, game_end_time
+    `SELECT match_id, game_name, tag_line, placement, comp, game_mode, game_end_time,
+            units, game_duration, level, traits, region_group
      FROM matches
      ${whereClause}
      ORDER BY game_end_time DESC

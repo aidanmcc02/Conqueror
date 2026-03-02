@@ -23,6 +23,17 @@ function platformToRegionGroup(platform: string): (typeof Constants.RegionGroups
   return DEFAULT_REGION_GROUP;
 }
 
+export type UnitSummary = {
+  character_id: string;
+  tier?: number;
+  items?: number[];
+};
+
+export type TraitSummary = {
+  name: string;
+  num_units: number;
+};
+
 export type TftMatchSummary = {
   matchId: string;
   puuid: string;
@@ -32,6 +43,12 @@ export type TftMatchSummary = {
   gameName: string;
   tagLine: string;
   gameEndTime: number; // ms since epoch
+  units?: UnitSummary[];
+  champions?: string[];
+  gameDuration?: number;
+  level?: number;
+  traits?: TraitSummary[];
+  regionGroup?: string;
 };
 
 export async function getPuuidAndRegion(
@@ -65,6 +82,22 @@ export async function getMatchIds(puuid: string, regionGroup: RegionGroup): Prom
   return res.response ?? [];
 }
 
+// Riot TFT Match API response shape (twisted returns raw JSON)
+type ParticipantUnit = { character_id?: string; tier?: number; items?: number[]; name?: string };
+type ParticipantTrait = { name?: string; tier_current?: number; num_units?: number };
+type MatchInfo = {
+  game_datetime?: number;
+  game_length?: number;
+  queue_id?: number;
+  participants?: Array<{
+    puuid?: string;
+    placement?: number;
+    level?: number;
+    traits?: ParticipantTrait[];
+    units?: ParticipantUnit[];
+  }>;
+};
+
 export async function getMatchDetails(
   matchId: string,
   regionGroup: RegionGroup,
@@ -74,24 +107,48 @@ export async function getMatchDetails(
   const match = res.response;
   if (!match?.info) return null;
 
-  const participant = match.info.participants?.find((p) => p.puuid === targetPuuid);
+  const info = match.info as MatchInfo;
+  const participant = info.participants?.find((p) => p.puuid === targetPuuid);
   if (!participant) return null;
 
-  const queueId = match.info.queue_id ?? 0;
+  const queueId = info.queue_id ?? 0;
   const gameMode =
     queueId === 1100 ? "double_up" : queueId === 1090 ? "ranked" : "normal";
 
-  const traits = (participant.traits ?? [])
-    .filter((t) => t.tier_current > 0)
+  const traitNames = (participant.traits ?? [])
+    .filter((t) => (t.tier_current ?? t.num_units ?? 0) > 0)
     .map((t) => t.name)
     .join(", ");
-  const units = (participant.units ?? [])
-    .map((u) => u.character_id?.replace("TFT_", "") ?? u.name ?? "")
+  const rawUnits = participant.units ?? [];
+  const unitNames = rawUnits
+    .map((u) => u.character_id?.replace(/^TFT\d*_/, "") ?? u.name ?? "")
     .filter(Boolean);
-  const comp = traits || units.join(", ") || "Unknown";
+  const comp = traitNames || unitNames.join(", ") || "Unknown";
 
-  const info = match.info as { game_datetime?: number };
   const gameEndTime = info.game_datetime ?? Date.now();
+
+  // Units with character_id for Community Dragon icons (tft{set}_{champion}_square.png)
+  const units: UnitSummary[] = rawUnits
+    .filter((u) => u.character_id)
+    .map((u) => ({
+      character_id: u.character_id!,
+      ...(u.tier != null && { tier: u.tier }),
+      ...(u.items?.length ? { items: u.items } : undefined),
+    }));
+
+  const champions = rawUnits
+    .map((u) => u.character_id)
+    .filter((id): id is string => Boolean(id));
+
+  const traits: TraitSummary[] = (participant.traits ?? [])
+    .filter((t) => (t.tier_current ?? t.num_units ?? 0) > 0)
+    .map((t) => ({
+      name: t.name ?? "Unknown",
+      num_units: t.tier_current ?? t.num_units ?? 0,
+    }));
+
+  const gameDuration = info.game_length != null ? info.game_length : undefined;
+  const level = participant.level != null ? participant.level : undefined;
 
   return {
     matchId,
@@ -102,5 +159,11 @@ export async function getMatchDetails(
     gameName: "",
     tagLine: "",
     gameEndTime,
+    units: units.length ? units : undefined,
+    champions: champions.length ? champions : undefined,
+    gameDuration,
+    level,
+    traits: traits.length ? traits : undefined,
+    regionGroup: String(regionGroup),
   };
 }

@@ -3,6 +3,12 @@ import cors from "cors";
 import { config } from "./config.js";
 import { getRecentMatches } from "./db/index.js";
 
+function buildMatchUrl(matchId: string, regionGroup?: string | null): string | null {
+  if (!matchId) return null;
+  const region = (regionGroup ?? "americas").toLowerCase();
+  return `https://tactics.tools/match/${region}/${matchId}`;
+}
+
 const GAME_MODES = [
   { id: "all", name: "All modes" },
   { id: "normal", name: "Normal" },
@@ -71,15 +77,26 @@ app.get("/match/recent", async (req, res) => {
 
     const { matches, hasMore } = await getRecentMatches(limit, offset, gameMode);
 
-    const matchesJson = matches.map((m) => ({
-      matchId: m.match_id,
-      gameName: m.game_name,
-      tagLine: m.tag_line,
-      placement: m.placement,
-      comp: m.comp,
-      gameMode: m.game_mode as "normal" | "ranked" | "double_up",
-      gameEndTime: m.game_end_time.toISOString(),
-    }));
+    const matchesJson = matches.map((m) => {
+      const url = buildMatchUrl(m.match_id, m.region_group);
+      return {
+        matchId: m.match_id,
+        gameName: m.game_name,
+        tagLine: m.tag_line,
+        placement: m.placement,
+        comp: m.comp,
+        gameMode: m.game_mode as "normal" | "ranked" | "double_up",
+        gameEndTime: m.game_end_time.toISOString(),
+        ...(m.units?.length && { units: m.units }),
+        ...(m.units?.length && {
+          champions: m.units.map((u) => u.character_id),
+        }),
+        ...(m.game_duration != null && { gameDuration: m.game_duration }),
+        ...(m.level != null && { level: m.level }),
+        ...(m.traits?.length && { traits: m.traits }),
+        ...(url && { url }),
+      };
+    });
 
     res.json({ matches: matchesJson, hasMore });
   } catch (err) {

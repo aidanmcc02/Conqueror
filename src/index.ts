@@ -75,7 +75,14 @@ async function processUser(user: {
         details.placement,
         details.comp,
         details.gameMode,
-        details.gameEndTime
+        details.gameEndTime,
+        {
+          units: details.units,
+          gameDuration: details.gameDuration,
+          level: details.level,
+          traits: details.traits,
+          regionGroup: details.regionGroup,
+        }
       );
       await markMatchProcessed(matchId, puuid);
       console.log(
