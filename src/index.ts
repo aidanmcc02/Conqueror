@@ -94,22 +94,16 @@ async function processUser(user: {
   }
 }
 
-async function poll(): Promise<void> {
-  let users;
-  try {
-    users = await getLinkedUsers();
-  } catch (err) {
-    console.error("[Conqueror] Failed to fetch linked users:", err);
-    return;
-  }
+let cachedUsers: Awaited<ReturnType<typeof getLinkedUsers>> = [];
 
-  if (!users?.length) {
+async function poll(): Promise<void> {
+  if (!cachedUsers.length) {
     console.log("[Conqueror] No linked users to poll");
     return;
   }
 
-  console.log(`[Conqueror] Polling ${users.length} linked user(s)`);
-  for (const user of users) {
+  console.log(`[Conqueror] Polling ${cachedUsers.length} linked user(s)`);
+  for (const user of cachedUsers) {
     await processUser(user);
   }
 }
@@ -121,6 +115,15 @@ async function main(): Promise<void> {
 
   await runMigrations();
   startServer();
+
+  try {
+    cachedUsers = (await getLinkedUsers()) ?? [];
+    console.log(`[Conqueror] Loaded ${cachedUsers.length} linked user(s) at startup`);
+  } catch (err) {
+    console.error("[Conqueror] Failed to fetch linked users at startup:", err);
+    process.exit(1);
+  }
+
   await poll();
   setInterval(poll, config.pollIntervalMs);
 }
