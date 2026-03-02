@@ -95,6 +95,11 @@ app.get("/match/recent", async (req, res) => {
         ...(m.level != null && { level: m.level }),
         ...(m.traits?.length && { traits: m.traits }),
         ...(url && { url }),
+        ...(m.lp_change != null && { lpChange: m.lp_change }),
+        ...(m.rated_tier && { ratedTier: m.rated_tier }),
+        ...(m.rated_division && { ratedDivision: m.rated_division }),
+        ...(m.rated_rating != null && { ratedRating: m.rated_rating }),
+        ...(m.current_rank && { currentRank: m.current_rank }),
       };
     });
 

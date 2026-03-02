@@ -16,6 +16,11 @@ export type ConquerorNotifyPayload = {
   comp: string;
   gameMode: "normal" | "ranked" | "double_up";
   url?: string;
+  lpChange?: number;
+  ratedTier?: string;
+  ratedDivision?: string;
+  ratedRating?: number;
+  currentRank?: string;
 };
 
 export type LinkedUsersResponse = {

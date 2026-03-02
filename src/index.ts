@@ -65,6 +65,11 @@ async function processUser(user: {
         placement: details.placement,
         comp: details.comp,
         gameMode: details.gameMode,
+        lpChange: details.lpChange,
+        ratedTier: details.ratedTier,
+        ratedDivision: details.ratedDivision,
+        ratedRating: details.ratedRating,
+        currentRank: details.currentRank,
       });
 
       await insertMatch(
@@ -82,6 +87,11 @@ async function processUser(user: {
           level: details.level,
           traits: details.traits,
           regionGroup: details.regionGroup,
+          lpChange: details.lpChange,
+          ratedTier: details.ratedTier,
+          ratedDivision: details.ratedDivision,
+          ratedRating: details.ratedRating,
+          currentRank: details.currentRank,
         }
       );
       await markMatchProcessed(matchId, puuid);

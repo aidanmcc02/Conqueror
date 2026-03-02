@@ -23,6 +23,24 @@ function platformToRegionGroup(platform: string): (typeof Constants.RegionGroups
   return DEFAULT_REGION_GROUP;
 }
 
+// Map region group to platform for TFT League API (uses platform routing)
+function regionGroupToPlatform(
+  regionGroup: RegionGroup
+): (typeof Constants.Regions)[keyof typeof Constants.Regions] {
+  switch (regionGroup) {
+    case Constants.RegionGroups.AMERICAS:
+      return Constants.Regions.AMERICA_NORTH;
+    case Constants.RegionGroups.EUROPE:
+      return Constants.Regions.EU_WEST;
+    case Constants.RegionGroups.ASIA:
+      return Constants.Regions.KOREA;
+    case Constants.RegionGroups.SEA:
+      return Constants.Regions.OCEANIA;
+    default:
+      return Constants.Regions.EU_WEST;
+  }
+}
+
 export type UnitSummary = {
   character_id: string;
   tier?: number;
@@ -49,6 +67,11 @@ export type TftMatchSummary = {
   level?: number;
   traits?: TraitSummary[];
   regionGroup?: string;
+  lpChange?: number;
+  ratedTier?: string;
+  ratedDivision?: string;
+  ratedRating?: number;
+  currentRank?: string;
 };
 
 export async function getPuuidAndRegion(
@@ -95,8 +118,46 @@ type MatchInfo = {
     level?: number;
     traits?: ParticipantTrait[];
     units?: ParticipantUnit[];
+    lp_gain?: number;
+    rated_tier?: string;
+    rated_division?: string;
+    rated_rating?: number;
   }>;
 };
+
+async function getLeagueEntry(
+  puuid: string,
+  regionGroup: RegionGroup
+): Promise<{ tier: string; division: string; leaguePoints: number } | null> {
+  try {
+    const platform = regionGroupToPlatform(regionGroup);
+    const res = await tftApi.League.getByPUUID(puuid, platform);
+    const entries = res.response ?? [];
+    const rankedTft = entries.find(
+      (e: { queueType?: string }) => e.queueType === "RANKED_TFT"
+    );
+    if (!rankedTft) return null;
+    const e = rankedTft as { tier?: string; rank?: string; leaguePoints?: number };
+    return {
+      tier: e.tier ?? "",
+      division: e.rank ?? "",
+      leaguePoints: Math.round(e.leaguePoints ?? 0),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function formatCurrentRank(tier: string, division: string, lp: number): string {
+  const tierName = tier ? tier.charAt(0) + tier.slice(1).toLowerCase() : "";
+  if (!tierName) return "";
+  if (["MASTER", "GRANDMASTER", "CHALLENGER"].includes(tier)) {
+    return lp > 0 ? `${tierName} ${lp} LP` : tierName;
+  }
+  if (!division) return tierName;
+  const divNum = { I: "1", II: "2", III: "3", IV: "4" }[division] ?? division;
+  return lp > 0 ? `${tierName} ${divNum} ${lp} LP` : `${tierName} ${divNum}`;
+}
 
 export async function getMatchDetails(
   matchId: string,
@@ -152,6 +213,45 @@ export async function getMatchDetails(
   const level =
     participant.level != null ? Math.round(participant.level) : undefined;
 
+  const p = participant as {
+    lp_gain?: number;
+    rated_tier?: string;
+    rated_division?: string;
+    rated_rating?: number;
+  };
+  let lpChange: number | undefined;
+  let ratedTier: string | undefined;
+  let ratedDivision: string | undefined;
+  let ratedRating: number | undefined;
+  let currentRank: string | undefined;
+
+  if (gameMode === "ranked") {
+    lpChange = p.lp_gain != null ? Math.round(p.lp_gain) : undefined;
+    ratedTier = p.rated_tier ?? undefined;
+    ratedDivision = p.rated_division ?? undefined;
+    ratedRating = p.rated_rating != null ? Math.round(p.rated_rating) : undefined;
+
+    if (!ratedTier || !ratedDivision) {
+      const league = await getLeagueEntry(targetPuuid, regionGroup);
+      if (league) {
+        ratedTier = ratedTier ?? league.tier;
+        ratedDivision = ratedDivision ?? league.division;
+        ratedRating = ratedRating ?? league.leaguePoints;
+        currentRank = formatCurrentRank(
+          league.tier,
+          league.division,
+          league.leaguePoints
+        );
+      }
+    } else {
+      currentRank = formatCurrentRank(
+        ratedTier,
+        ratedDivision,
+        ratedRating ?? 0
+      );
+    }
+  }
+
   return {
     matchId,
     puuid: targetPuuid,
@@ -167,5 +267,10 @@ export async function getMatchDetails(
     level,
     traits: traits.length ? traits : undefined,
     regionGroup: String(regionGroup),
+    lpChange,
+    ratedTier,
+    ratedDivision,
+    ratedRating,
+    currentRank,
   };
 }
