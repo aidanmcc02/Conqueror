@@ -50,6 +50,7 @@ async function processUser(user: {
     return;
   }
 
+  console.log(`[Conqueror] Checking ${game_name}#${tag_line} (${matchIds.length} matches)`);
   for (const matchId of matchIds) {
     try {
       const alreadyProcessed = await isMatchProcessed(matchId);
@@ -108,6 +109,13 @@ async function processUser(user: {
 let cachedUsers: Awaited<ReturnType<typeof getLinkedUsers>> = [];
 
 async function poll(): Promise<void> {
+  try {
+    cachedUsers = (await getLinkedUsers()) ?? [];
+  } catch (err) {
+    console.error("[Conqueror] Failed to fetch linked users:", err);
+    return;
+  }
+
   if (!cachedUsers.length) {
     console.log("[Conqueror] No linked users to poll");
     return;

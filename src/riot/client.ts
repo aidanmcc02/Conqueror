@@ -189,9 +189,10 @@ export async function getMatchDetails(
   const participant = info.participants?.find((p) => p.puuid === targetPuuid);
   if (!participant) return null;
 
+  // Riot TFT queue IDs: 1090=normal, 1100=ranked, 1150=double_up (per queues.json + Double Up)
   const queueId = info.queue_id ?? 0;
   const gameMode =
-    queueId === 1100 ? "double_up" : queueId === 1090 ? "ranked" : "normal";
+    queueId === 1150 ? "double_up" : queueId === 1100 ? "ranked" : "normal";
 
   const traitNames = (participant.traits ?? [])
     .filter((t) => (t.tier_current ?? t.num_units ?? 0) > 0)
